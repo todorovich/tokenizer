@@ -1,0 +1,7 @@
+add_subdirectory(catch2)
+add_subdirectory(blake3)
+add_subdirectory(fastbase64)
+add_subdirectory(simdjson)
+add_subdirectory(uSockets)
+add_subdirectory(uWebSockets)
+add_subdirectory(words)

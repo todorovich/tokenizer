@@ -1,25 +1,29 @@
-add_executable(test_tokenizer)
-
-target_sources(test_tokenizer
+target_sources(encryption_test
     PRIVATE
-        test_tokenizer.cpp
+        test_aes356ecb.cpp
 )
 
-target_link_libraries(test_tokenizer
+target_link_libraries(encryption_test
     PRIVATE
-        tokenizer
+        main_library
         Catch2::Catch2WithMain
 )
 
-add_executable(performance_test)
-
-target_sources(performance_test
+target_sources(http_server_test
     PRIVATE
-        test_tokenizer_performance.cpp
+        test_http_server.cpp
 )
 
-target_link_libraries(performance_test
+target_include_directories(http_server_test
     PRIVATE
-        tokenizer
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${web_sockets_SOURCE_DIR}/src
+        ${web_sockets_SOURCE_DIR}/uSockets/src
+)
+
+target_link_libraries(http_server_test
+    PRIVATE
+        main_library
         Catch2::Catch2WithMain
+        CURL::libcurl
 )

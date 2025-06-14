@@ -1,114 +1,96 @@
-# Secure Tokenizer (C++)
+# Secure Tokenizer & Encoder (C++)
 
-A high-performance, cryptographically secure, deterministic tokenizer. It transforms sensitive tokens (e.g., names, IDs) into pseudonymized, fixed-length strings that preserve uniqueness and aggregability, while preventing reversal without a secret key.
+A high-performance, reversible token encoder and pseudonymizer. This system provides secure encoding mechanisms using both AES-256-ECB and HMAC/BLAKE3-based token transformations.
 
 ---
 
 ## ✨ Features
 
-- ✅ **Deterministic**: Same input → same output
-- ✅ **HMAC-SHA256-based**: Uses standard cryptographic primitives
-- ✅ **Single-core optimized**: Manual HMAC with EVP API
-- ✅ **Bias-free character mapping**
-- ✅ **All printable ASCII characters supported**
-- ✅ **Includes correctness and performance tests**
+- 🔒 AES-256 ECB reversible encryption with PKCS7 padding
+- 🔁 Deterministic token pseudonymization using HMAC or BLAKE3
+- 🚀 Fast Base64 encoding/decoding via AVX2-optimized backend
+- ⚖️ Bias-free and structure-preserving token mappings
+- 🔧 Exposes HTTP endpoints for encode/decode via uWebSockets
+- 📊 Catch2-based test coverage for both correctness and performance
 
 ---
 
-## 🔒 Use Case
+## 📦 Project Structure
 
-Intended for:
-- Pseudonymizing structured fields (e.g., names, email handles)
-- Maintaining token-level consistency across datasets
-- Supporting reversible mapping only with possession of keys
+```
+src/
+  AES256ECB.cpp/hpp       # AES-256-ECB encoding/decoding
+  Base64.cpp/hpp          # Fast Base64 via fastavxbase64
+  tokenizer.cpp/hpp       # HMAC and BLAKE3 pseudonymizers
+  Curl.hpp                # (not currently used)
+  CircularPool.hpp        # (not currently used)
+  main.cpp                # HTTP interface (uWebSockets)
 
-Not suitable for:
-- Irreversible one-time encryption
-- Cryptographically strong anonymization without controlled keys
+tests/
+  test_aes356ecb.cpp     # Deterministic AES validation
+  test_http_server.cpp   # Test Performance and accuracy of token encoders
+
+external/
+  blake3/                         # Fast cryptographic hash
+  catch2/                         # Testing framework
+  fastbase64/                     # AVX2 base64
+  simdjson/                       # (not currently used)
+  uSockets/                       # Socket backend
+  uWebSockets/                    # HTTP server
+  word/                           # Google's 10,000 english words.
+```
 
 ---
 
-## 🛠 Build
+## 🔐 Usage
 
-Requires:
-- CMake ≥ 3.20
-- OpenSSL (dev headers)
-- C++20 compiler
+### AES-256 ECB
+
+```
+POST /encode/aes256ecb
+POST /decode/aes256ecb
+```
+
+Input: raw token in body (first line).  
+Output: encoded or decoded token as Base64.
+
+## 🧪 Testing
+
+### Build and Test
 
 ```bash
 mkdir build && cd build
 cmake ..
-cmake --build .
+cmake --build . -- -j
 ```
 
-To run tests:
+Run unit and performance tests:
+
 ```bash
-./test_tokenizer
+./test_aes356ecb
 ./test_tokenizer_performance -s
 ```
 
 ---
 
-## 🧪 Algorithms
-
-Five implementations (`encode_token1` → `encode_token5`) are provided to compare:
-
-| Version | Notes                                      |
-|---------|--------------------------------------------|
-| 1       | Baseline double HMAC                       |
-| 2       | Single HMAC with SHA-512                   |
-| 3       | Optimized string reuse                     |
-| 4       | Fixed-key stack buffer                     |
-| 5       | Manual HMAC with EVP (fastest)             |
-
-All versions preserve:
-- Token length
-- Output uniqueness per input
-- ASCII-printable character constraints
-
----
-
-## 🔍 Testing
-
-- `test_tokenizer.cpp`: Correctness tests using Catch2
-- `test_tokenizer_performance.cpp`: Performance comparison of all variants
-- Generates 1M random tokens and measures throughput
-
----
-
-## 📦 Example Output
-
-For token `"Fred"` with given key/salt/domain:
-```
-Encoded: &h4G
-```
-
-Output varies depending on key/salt and domain, but is stable per configuration.
-
----
-
-## 📁 Project Structure
+## ⚡ Benchmark (WSL2, Ryzen 5800X)
 
 ```
-src/
-  tokenizer.cpp/hpp       # All encoder variants
-tests/
-  test_tokenizer.cpp      # Functional tests
-  test_tokenizer_performance.cpp  # Speed tests
-main.cpp                  # (unused placeholder)
+[encode] 10000 items in 0.551902s = 18119.2 req/s
+[decode] 10000 items in 0.527206s = 18967.9 req/s
 ```
 
 ---
 
-## 🔐 Security Notes
+## 🛠 Requirements
 
-- Keys should be kept secret and unique per dataset/domain.
-- If token inputs are low-entropy (e.g. names), preimage attacks are only mitigated by key secrecy.
-- Use HMAC-derived output to separate contexts between fields.
+- CMake ≥ 3.20
+- OpenSSL development libraries
+- C++20-compatible compiler (GCC 11+, Clang 13+)
+- AVX2-capable CPU for fastbase64
 
 ---
 
 ## 📄 License
 
 © Micho Todorovich. All rights reserved.
-
