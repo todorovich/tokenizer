@@ -42,3 +42,35 @@ TEST_CASE("AES256ECB encode/decode is deterministic and reversible", "[aes256ecb
 	for (const auto& [orig, enc] : outputs)
 		out << orig << '\t' << enc << '\n';
 }
+
+TEST_CASE("AES256ECB encode/decode performance", "[aes256ecb][benchmark]") {
+    const AES256ECB aes("0123456789ABCDEF0123456789ABCDEF");
+    const auto words = load_words();
+    REQUIRE(words.size() >= 10000);
+
+    const auto start_enc = std::chrono::high_resolution_clock::now();
+    std::vector<std::string> encoded;
+    encoded.reserve(words.size());
+    for (const auto& word : words)
+        encoded.push_back(aes.encode(word));
+    const auto end_enc = std::chrono::high_resolution_clock::now();
+
+    const auto start_dec = std::chrono::high_resolution_clock::now();
+    std::vector<std::string> decoded;
+    decoded.reserve(words.size());
+    for (const auto& enc : encoded)
+        decoded.push_back(aes.decode(enc));
+    const auto end_dec = std::chrono::high_resolution_clock::now();
+
+    for (size_t i = 0; i < words.size(); ++i)
+        REQUIRE(decoded[i] == words[i]);
+
+    using namespace std::chrono;
+    auto encode_time = duration_cast<duration<double>>(end_enc - start_enc).count();
+    auto decode_time = duration_cast<duration<double>>(end_dec - start_dec).count();
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "[encode] " << words.size() << " items in " << encode_time
+              << "s = " << (words.size() / encode_time) << " ops/s\n";
+    std::cout << "[decode] " << words.size() << " items in " << decode_time
+              << "s = " << (words.size() / decode_time) << " ops/s\n";
+}

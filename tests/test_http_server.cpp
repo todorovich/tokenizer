@@ -80,6 +80,30 @@ void write_encoded_results_json(
     out << "\n]\n";
 }
 
+TEST_CASE("startup", "[http][roundtrip][multi]") {
+    // Start server and wait for readiness
+    std::promise<void> server_ready;
+    std::future<void> ready_future = server_ready.get_future();
+
+    const auto start = std::chrono::steady_clock::now();
+
+    std::thread server_thread([&] {
+        run_server_thread([&] {
+            server_ready.set_value();
+        });
+    });
+
+    ready_future.wait(); // Wait until server is listening
+    const auto end = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+    // Clean shutdown
+    pthread_cancel(server_thread.native_handle()); // forcibly cancel uWebSockets loop
+    server_thread.join();
+
+    std::cout << "Startup Time: " << elapsed.count() << " microseconds\n";
+}
+
 TEST_CASE("libcurl encode/decode roundtrip with timing and collision check", "[http][roundtrip][multi]") {
     // Start server and wait for readiness
     std::promise<void> server_ready;
@@ -97,6 +121,76 @@ TEST_CASE("libcurl encode/decode roundtrip with timing and collision check", "[h
 
     const std::string encode_url = "http://127.0.0.1:8080/encode/aes256ecb";
     const std::string decode_url = "http://127.0.0.1:8080/decode/aes256ecb";
+    REQUIRE(wordlist.size() >= 10000);
+
+    encoded_to_original.clear();
+    original_to_decoded.clear();
+
+    CurlMulti multi{1000};
+
+    // Encode phase
+    size_t i = 0;
+    const auto encode_start = std::chrono::steady_clock::now();
+
+    while (i < wordlist.size()) {
+        while (CurlRequest* req = multi.try_next_request()) {
+            req->set_url(encode_url);
+            req->set_post_body(wordlist[i++] + "\n");
+            multi.enqueue(*req, handle_encode);
+            if (i == wordlist.size()) break;
+        }
+        multi.run();
+    }
+
+    const auto encode_end = std::chrono::steady_clock::now();
+    const double encode_elapsed = std::chrono::duration<double>(encode_end - encode_start).count();
+    std::cout << "[encode] " << encoded_to_original.size() << " items in "
+              << encode_elapsed << "s = "
+              << (encoded_to_original.size() / encode_elapsed) << " req/s\n";
+
+    // Decode phase
+    std::vector<std::string> encoded_values;
+    encoded_values.reserve(encoded_to_original.size());
+    for (const auto& [encoded, _] : encoded_to_original)
+        encoded_values.push_back(encoded);
+
+    i = 0;
+    const auto decode_start = std::chrono::steady_clock::now();
+
+    while (i < encoded_values.size()) {
+        while (CurlRequest* req = multi.try_next_request()) {
+            req->set_url(decode_url);
+            req->set_post_body(encoded_values[i++] + "\n");
+            multi.enqueue(*req, handle_decode);
+            if (i == encoded_values.size()) break;
+        }
+        multi.run();
+    }
+
+    const auto decode_end = std::chrono::steady_clock::now();
+    const double decode_elapsed = std::chrono::duration<double>(decode_end - decode_start).count();
+    std::cout << "[decode] " << original_to_decoded.size() << " items in "
+              << decode_elapsed << "s = "
+              << (original_to_decoded.size() / decode_elapsed) << " req/s\n";
+
+    REQUIRE(original_to_decoded.size() == wordlist.size());
+
+    for (const std::string& word : wordlist) {
+        REQUIRE(original_to_decoded.at(word) == word);
+    }
+
+    write_encoded_results_json(original_to_decoded, "original_to_decoded.json");
+
+    // Clean shutdown
+    pthread_cancel(server_thread.native_handle()); // forcibly cancel uWebSockets loop
+    server_thread.join();
+}
+
+TEST_CASE("libcurl encode/decode roundtrip with timing and collision check, server already up", "[http][roundtrip][multi]") {
+    CurlGlobal curl_init;
+
+    const std::string encode_url = "http://www.todorovich.net/encode/aes256ecb";
+    const std::string decode_url = "http://www.todorovich.net/decode/aes256ecb";
     REQUIRE(wordlist.size() >= 10000);
 
     encoded_to_original.clear();
@@ -156,8 +250,4 @@ TEST_CASE("libcurl encode/decode roundtrip with timing and collision check", "[h
     }
 
     write_encoded_results_json(original_to_decoded, "original_to_decoded.json");
-
-    // Clean shutdown
-    pthread_cancel(server_thread.native_handle()); // forcibly cancel uWebSockets loop
-    server_thread.join();
 }

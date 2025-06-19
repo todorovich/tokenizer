@@ -1,5 +1,3 @@
-#pragma once
-
 #include <App.h>
 #include <string>
 #include <string_view>
@@ -40,7 +38,7 @@ void run_server_thread(const std::function<void()>& on_ready = {}) {
 				res->end(std::move(decoded) + "\n");
 			});
 		})
-		.listen(8080, [on_ready](auto* token) {
+		.listen("0.0.0.0",8080, [on_ready](auto* token) {
 			if (!token) {
 				perror("listen");
 				std::exit(1);
