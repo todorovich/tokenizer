@@ -1,14 +1,15 @@
 #pragma once
-#include <vector>
 #include <cstdint>
-#include <openssl/aes.h>
 #include <fpe.h>
+#include <openssl/aes.h>
+#include <vector>
 
-class FF1Cipher {
-public:
-    FF1Cipher(const std::vector<uint8_t>& key,
-              const std::vector<uint8_t>& tweak,
-              unsigned int radix);
+class FF1Cipher
+{
+  public:
+    FF1Cipher(
+        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, unsigned int radix
+    );
     ~FF1Cipher();
 
     FF1Cipher(const FF1Cipher&) = delete;
@@ -19,8 +20,8 @@ public:
     std::vector<unsigned int> encrypt(std::vector<unsigned int>&& digits) const;
     std::vector<unsigned int> decrypt(std::vector<unsigned int>&& digits) const;
 
-private:
-    FPE_KEY _key {};
+  private:
+    FPE_KEY _key{};
     bool _valid = false;
     unsigned int _radix = 10;
 

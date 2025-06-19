@@ -11,7 +11,9 @@ target_sources(main_library
     Base64.hpp
     CircularPool.hpp
     Curl.hpp
+    IndexedGlyphSet.hpp
     FF1Cipher.hpp
+    GlyphFPECipher.hpp
     WebServer.hpp
 )
 
@@ -29,11 +31,12 @@ target_include_directories(main_library
 
 target_link_libraries(main_library
     PUBLIC
-        OpenSSL::Crypto
+        bbhash_lib
+        fastbase64
         fpe_lib
+        OpenSSL::Crypto
         uWebSockets
         uSockets
-        fastbase64
     PRIVATE
         #BLAKE3::blake3
         #simdjson
