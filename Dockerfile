@@ -2,8 +2,8 @@
 FROM alpine:3.22 AS builder
 
 RUN apk add --no-cache \
+    build-base \
     cmake \
-    ca-certificates \
     curl-dev \
     git \
     openssl-dev
@@ -17,9 +17,7 @@ RUN cmake -B build -DCMAKE_BUILD_TYPE=Release \
 # ---------- Stage 2: Runtime ----------
 FROM alpine:3.22
 
-RUN apk add --no-cache \
-    ca-certificates \
-    libstdc++
+RUN apk add --no-cache libstdc++
 
 WORKDIR /server
 # Copy just the server binary (and any other required assets/config)
