@@ -69,8 +69,8 @@ TEST_CASE("AES256ECB encode/decode performance", "[aes256ecb][benchmark]") {
     auto encode_time = duration_cast<duration<double>>(end_enc - start_enc).count();
     auto decode_time = duration_cast<duration<double>>(end_dec - start_dec).count();
     std::cout << std::fixed << std::setprecision(2);
-    std::cout << "[encode] " << words.size() << " items in " << encode_time
+    std::cout << "[encode] AES256ECB encoded " << words.size() << " items in " << encode_time
               << "s = " << (words.size() / encode_time) << " ops/s\n";
-    std::cout << "[decode] " << words.size() << " items in " << decode_time
+    std::cout << "[decode] AES256ECB decoded " << words.size() << " items in " << decode_time
               << "s = " << (words.size() / decode_time) << " ops/s\n";
 }

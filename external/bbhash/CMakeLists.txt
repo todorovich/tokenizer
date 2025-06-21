@@ -10,5 +10,5 @@ add_library(bbhash_lib INTERFACE)
 
 target_include_directories(bbhash_lib
     INTERFACE
-        ${bbhash_SOURCE_DIR}/include
+        ${bbhash_SOURCE_DIR}
 )

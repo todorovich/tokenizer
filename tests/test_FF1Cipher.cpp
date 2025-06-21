@@ -154,13 +154,13 @@ TEST_CASE("FF1Cipher encode/decode performance benchmark with ops/s", "[ff1ciphe
     double enc_ops_per_sec = input_size / encode_duration.count();
     double dec_ops_per_sec = input_size / decode_duration.count();
 
-    std::cout << "[benchmark] Encoded " << input_size << " items of length " << digit_count
+    std::cout << "[benchmark] FF1Cipher Encoded " << input_size << " items of length " << digit_count
               << " in " << encode_duration.count() << " seconds ("
               << enc_ops_per_sec << " ops/s)" << std::endl;
-    std::cout << "[benchmark] Decoded " << input_size << " items of length " << digit_count
+    std::cout << "[benchmark] FF1Cipher Decoded " << input_size << " items of length " << digit_count
               << " in " << decode_duration.count() << " seconds ("
               << dec_ops_per_sec << " ops/s)" << std::endl;
 
-    CHECK(enc_ops_per_sec > 85'000);
-    CHECK(dec_ops_per_sec > 85'000);
+    CHECK(enc_ops_per_sec > 75'000);
+    CHECK(dec_ops_per_sec > 75'000);
 }

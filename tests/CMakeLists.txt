@@ -3,7 +3,9 @@ target_sources(encryption_test
         test_AES356ECB.cpp
         test_IndexedGlyphSet.cpp
         test_FF1Cipher.cpp
-        test_GlyphFPECipher.hpp
+        test_GlyphFPECipher.cpp
+        test_UnicodeGlyphCipherIndex.cpp
+        test_UnicodeFPECipher.cpp
 )
 target_link_libraries(encryption_test
     PRIVATE

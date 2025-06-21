@@ -5,6 +5,7 @@ target_sources(main_library
     AES256ECB.cpp
     Base64.cpp
     FF1Cipher.cpp
+    UnicodeFPECipher.cpp
     WebServer.cpp
   PUBLIC
     AES256ECB.hpp
@@ -14,6 +15,7 @@ target_sources(main_library
     IndexedGlyphSet.hpp
     FF1Cipher.hpp
     GlyphFPECipher.hpp
+    UnicodeGlyphCipherIndex.hpp
     WebServer.hpp
 )
 

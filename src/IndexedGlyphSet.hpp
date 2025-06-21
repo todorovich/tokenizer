@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 
+// TODO: performance can be better.
 class IndexedGlyphSet
 {
 public:
@@ -17,6 +18,9 @@ public:
     {
         if (backing_.empty())
             throw std::invalid_argument("IndexedGlyphSet: input string empty");
+
+        if (backing_.size() < 2)
+            throw std::invalid_argument("IndexedGlyphSet: not enough characters to form an indexed set requires >1");
 
         glyph_size_ = get_glyph_size(backing_);
         if (glyph_size_ == 0 || backing_.size() % glyph_size_ != 0)
@@ -46,10 +50,9 @@ public:
 
     IndexedGlyphSet(const IndexedGlyphSet& other) = delete;
     IndexedGlyphSet& operator=(const IndexedGlyphSet& other) = delete;
+
     IndexedGlyphSet(IndexedGlyphSet&& other) noexcept = default;
     IndexedGlyphSet& operator=(IndexedGlyphSet&& other) noexcept = default;
-
-
 
     size_t glyph_size() const { return glyph_size_; }
     size_t size() const { return glyph_views_.size(); }
