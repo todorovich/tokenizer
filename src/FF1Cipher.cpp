@@ -44,7 +44,7 @@ FF1Cipher<DigitType>::FF1Cipher(
 }
 
 template <ValidDigitType DigitType>
-FF1Cipher<DigitType>::~FF1Cipher()
+FF1Cipher<DigitType>::~FF1Cipher() noexcept
 {
     cleanup();
 }
@@ -118,7 +118,7 @@ std::vector<DigitType> FF1Cipher<DigitType>::decrypt(std::vector<DigitType>&& di
 }
 
 template <ValidDigitType DigitType>
-void FF1Cipher<DigitType>::cleanup()
+void FF1Cipher<DigitType>::cleanup() noexcept
 {
     if (_valid)
     {

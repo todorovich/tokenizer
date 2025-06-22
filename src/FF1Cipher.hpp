@@ -16,7 +16,7 @@ class FF1Cipher
     FF1Cipher(
         const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, DigitType radix
     );
-    ~FF1Cipher();
+    ~FF1Cipher() noexcept;
 
     FF1Cipher(const FF1Cipher&) = delete;
     FF1Cipher& operator=(const FF1Cipher&) = delete;
@@ -32,5 +32,5 @@ class FF1Cipher
     bool _valid = false;
     DigitType _radix = 10;
 
-    void cleanup();
+    void cleanup() noexcept;
 };
