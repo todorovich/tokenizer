@@ -1,14 +1,20 @@
 #pragma once
+
+#include <vector>
+#include <concepts>
 #include <cstdint>
 #include <fpe.h>
-#include <openssl/aes.h>
-#include <vector>
 
+// Concept to constrain DigitType to valid integral types
+template<typename T>
+concept ValidDigitType = std::same_as<T, std::uint8_t> || std::same_as<T, std::uint16_t> || std::same_as<T, std::uint32_t>;
+
+template <ValidDigitType DigitType = std::uint32_t>
 class FF1Cipher
 {
   public:
     FF1Cipher(
-        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, unsigned int radix
+        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, DigitType radix
     );
     ~FF1Cipher();
 
@@ -17,13 +23,14 @@ class FF1Cipher
     FF1Cipher(FF1Cipher&&) noexcept;
     FF1Cipher& operator=(FF1Cipher&&) noexcept;
 
-    std::vector<unsigned int> encrypt(std::vector<unsigned int>&& digits) const;
-    std::vector<unsigned int> decrypt(std::vector<unsigned int>&& digits) const;
+    // Use DigitType for inputs and outputs
+    std::vector<DigitType> encrypt(std::vector<DigitType>&& digits) const;
+    std::vector<DigitType> decrypt(std::vector<DigitType>&& digits) const;
 
   private:
-    FPE_KEY _key{};
+    mutable FPE_KEY _key{};
     bool _valid = false;
-    unsigned int _radix = 10;
+    DigitType _radix = 10;
 
     void cleanup();
 };

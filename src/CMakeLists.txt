@@ -1,5 +1,7 @@
 # TOKENIZER
 
+target_compile_options(main_library PRIVATE -mavx2)
+
 target_sources(main_library
   PRIVATE
     AES256ECB.cpp
@@ -15,6 +17,7 @@ target_sources(main_library
     IndexedGlyphSet.hpp
     FF1Cipher.hpp
     GlyphFPECipher.hpp
+    RadixValidator.hpp
     UnicodeGlyphCipherIndex.hpp
     WebServer.hpp
 )

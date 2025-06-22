@@ -43,7 +43,7 @@ public:
     )
         : _glyph_set(glyph_set)
         , _noop(noop)
-        , _ff1_cipher(FF1Cipher(key, tweak, glyph_set->size()))
+        , _ff1_cipher(FF1Cipher<uint32_t>(key, tweak, glyph_set->size()))
     {
         _encode_func = noop ? &GlyphFPECipher::encode_noop : &GlyphFPECipher::encode_ff1;
         _decode_func = noop ? &GlyphFPECipher::decode_noop : &GlyphFPECipher::decode_ff1;
@@ -83,7 +83,7 @@ public:
 private:
     not_null<const IndexedGlyphSet*> _glyph_set;
     bool _noop;
-    FF1Cipher _ff1_cipher;
+    FF1Cipher<uint32_t> _ff1_cipher;
 
     using EncodeDecodeFunc = std::string (GlyphFPECipher::*)(std::string_view) const;
     EncodeDecodeFunc _encode_func;

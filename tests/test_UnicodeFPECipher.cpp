@@ -89,7 +89,7 @@ static std::vector<std::string> load_words()
     return words;
 }
 
-TEST_CASE("UnicodeFPECipher benchmark per-word using PreconfiguredIndexedGlyphSet and Google 10,000 words", "[UnicodeFPECipher][performance]") {
+TEST_CASE("UnicodeFPECipher benchmark 10,000 words", "[UnicodeFPECipher][performance]") {
     std::vector<uint8_t> key(16, 0x01);   // example key
     std::vector<uint8_t> tweak(4, 0x02);  // example tweak
 
