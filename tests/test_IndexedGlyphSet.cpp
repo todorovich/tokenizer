@@ -6,7 +6,7 @@ TEST_CASE("IndexedGlyphSet constructs with unique glyphs and infers glyph size",
     glyphs.append("\xC3\xB1"); // ñ (2 bytes)
     glyphs.append("\xC3\xB6"); // ö (2 bytes)
 
-    IndexedGlyphSet igs(glyphs);
+    IndexedGlyphSet igs("test", (std::move(glyphs)));
 
     REQUIRE(igs.glyph_size() == 2);
     REQUIRE(igs.size() == 2);
@@ -17,7 +17,7 @@ TEST_CASE("IndexedGlyphSet maps glyphs to indices and back", "[IndexedGlyphSet]"
     glyphs.append("\xC3\xB1"); // ñ
     glyphs.append("\xC3\xB6"); // ö
 
-    IndexedGlyphSet igs(glyphs);
+    IndexedGlyphSet igs("test", (std::move(glyphs)));
 
     REQUIRE(igs.contains("\xC3\xB1"));
     REQUIRE(igs.contains("\xC3\xB6"));
@@ -38,11 +38,11 @@ TEST_CASE("IndexedGlyphSet throws on duplicate glyphs", "[IndexedGlyphSet]") {
     glyphs.append("\xC3\xB6");
     glyphs.append("\xC3\xB1"); // duplicate
 
-    REQUIRE_THROWS_AS(IndexedGlyphSet(glyphs), std::invalid_argument);
+    REQUIRE_THROWS_AS(IndexedGlyphSet("test", std::move(glyphs)), std::invalid_argument);
 }
 
 TEST_CASE("IndexedGlyphSet throws on invalid glyph size input", "[IndexedGlyphSet]") {
-    REQUIRE_THROWS_AS(IndexedGlyphSet(std::string("\xC3")), std::invalid_argument);
+    REQUIRE_THROWS_AS(IndexedGlyphSet("test", std::string("\xC3")), std::invalid_argument);
 }
 
 TEST_CASE("IndexedGlyphSet iterator works", "[IndexedGlyphSet]") {
@@ -50,7 +50,7 @@ TEST_CASE("IndexedGlyphSet iterator works", "[IndexedGlyphSet]") {
     glyphs.append("\xC3\xB1");
     glyphs.append("\xC3\xB6");
 
-    IndexedGlyphSet igs(glyphs);
+    IndexedGlyphSet igs("test", (std::move(glyphs)));
 
     auto it = igs.begin();
     REQUIRE(*it == std::string_view("\xC3\xB1", 2));
@@ -63,7 +63,7 @@ TEST_CASE("IndexedGlyphSet iterator works", "[IndexedGlyphSet]") {
 TEST_CASE("IndexedGlyphSet encode/decode performance benchmark", "[IndexedGlyphSet][performance]") {
     // Create a simple ASCII alpha codebook (all single-byte glyphs)
     std::string ascii_alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-    IndexedGlyphSet codebook(ascii_alpha);
+    IndexedGlyphSet codebook("test", (std::move(ascii_alpha)));
 
     constexpr size_t input_size = 100000;
     std::vector<std::string> inputs;
@@ -71,7 +71,7 @@ TEST_CASE("IndexedGlyphSet encode/decode performance benchmark", "[IndexedGlyphS
 
     // Generate test strings: single-character glyph repeated
     for (size_t i = 0; i < input_size; ++i) {
-        inputs.emplace_back(std::string(1, ascii_alpha[i % ascii_alpha.size()]));
+        inputs.emplace_back(std::string(1, codebook.glyphs()[i % codebook.glyphs().size()]));
     }
 
     // Benchmark encode: glyph -> index

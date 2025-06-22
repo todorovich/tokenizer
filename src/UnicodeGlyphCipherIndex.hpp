@@ -26,7 +26,7 @@ public:
         const std::vector<uint8_t>& tweak
     )
         : glyph_ciphers(std::move(ciphers)),
-          noop_cipher(new IndexedGlyphSet(" \n\r"))
+          noop_cipher(new IndexedGlyphSet("noop", " \n\r"))
     {
         if (glyph_ciphers.empty())
             throw std::invalid_argument("ciphers vector must not be empty");

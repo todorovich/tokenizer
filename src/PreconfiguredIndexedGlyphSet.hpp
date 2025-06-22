@@ -10,7 +10,7 @@ struct PreconfiguredIndexedGlyphSet
     // Control (non-printable, non-whitespace)
     static const IndexedGlyphSet& control()
     {
-        static IndexedGlyphSet set([] {
+        static IndexedGlyphSet set("control",[] {
             std::string glyphs;
             for (char c = 0x00; c <= 0x08; ++c) glyphs += c;
             for (char c = 0x0E; c <= 0x1F; ++c) glyphs += c;
@@ -23,21 +23,21 @@ struct PreconfiguredIndexedGlyphSet
     // Whitespace: tab, LF, VT, FF, CR, space
     static const IndexedGlyphSet& whitespace()
     {
-        static IndexedGlyphSet set("\t\n\v\f\r ");
+        static IndexedGlyphSet set("whitespace", "\t\n\v\f\r ");
         return set;
     }
 
     // Digits: '0'–'9'
     static const IndexedGlyphSet& digits()
     {
-        static IndexedGlyphSet set("0123456789");
+        static IndexedGlyphSet set("digits", "0123456789");
         return set;
     }
 
     // Letters: 'A'-'Z', 'a'-'z'
     static const IndexedGlyphSet& letters()
     {
-        static IndexedGlyphSet set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
+        static IndexedGlyphSet set("letters", "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz");
         return set;
     }
 
@@ -45,7 +45,7 @@ struct PreconfiguredIndexedGlyphSet
     static const IndexedGlyphSet& symbols()
     {
         static IndexedGlyphSet set(
-            "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+            "symbols","!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
         );
         return set;
     }

@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include "GlyphFPECipher.hpp"
 #include "IndexedGlyphSet.hpp"
+#include "PreconfiguredIndexedGlyphSet.hpp"
 
 #include <string>
 #include <vector>
@@ -8,10 +9,10 @@
 
 // Build ASCII alphabet glyph set
 IndexedGlyphSet buildAsciiCodebook() {
-    static const std::string ascii_alpha =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-    return IndexedGlyphSet(ascii_alpha);
+    return IndexedGlyphSet(
+        "ascii_letters",
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    );
 }
 
 TEST_CASE("GlyphFPECipher construction and glyphs accessor") {
@@ -104,3 +105,5 @@ TEST_CASE("GlyphFPECipher performance benchmark", "[performance]") {
     CHECK(enc_ops_per_sec > 60000);
     CHECK(dec_ops_per_sec > 60000);
 }
+
+

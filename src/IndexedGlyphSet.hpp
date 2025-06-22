@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
+#include <immintrin.h>  // For AVX2 SIMD
 
 // TODO: performance can be better.
 class IndexedGlyphSet
@@ -13,26 +14,27 @@ class IndexedGlyphSet
 public:
     // Construct from a flat UTF-8 string of concatenated glyphs,
     // all glyphs must be the same byte length (inferred from first glyph)
-    explicit IndexedGlyphSet(std::string flat_glyphs)
-        : backing_(std::move(flat_glyphs))
+    explicit IndexedGlyphSet(std::string&& name, std::string&& flat_glyphs)
+        : _glyph_size(get_glyph_size(flat_glyphs))
+        , _glyphs(std::move(flat_glyphs))
+        , _name(std::move(name))
     {
-        if (backing_.empty())
+        if (_glyphs.empty())
             throw std::invalid_argument("IndexedGlyphSet: input string empty");
 
-        if (backing_.size() < 2)
-            throw std::invalid_argument("IndexedGlyphSet: not enough characters to form an indexed set requires >1");
+        if (_glyphs.size() < 2)
+            throw std::invalid_argument("IndexedGlyphSet: not enough characters to form an indexed set, requires as size >1");
 
-        glyph_size_ = get_glyph_size(backing_);
-        if (glyph_size_ == 0 || backing_.size() % glyph_size_ != 0)
+        if (_glyphs.size() % _glyph_size != 0)
             throw std::invalid_argument("IndexedGlyphSet: invalid glyph size or input length");
 
-        const size_t num_glyphs = backing_.size() / glyph_size_;
+        const size_t num_glyphs = _glyphs.size() / _glyph_size;
         glyph_views_.reserve(num_glyphs);
 
         for (size_t i = 0; i < num_glyphs; ++i)
-            glyph_views_.emplace_back(&backing_[i * glyph_size_], glyph_size_);
+            glyph_views_.emplace_back(&_glyphs[i * _glyph_size], _glyph_size);
 
-        std::sort(glyph_views_.begin(), glyph_views_.end());
+        std::ranges::sort(glyph_views_);
 
         // Check duplicates by comparing adjacent after sort
         for (size_t i = 1; i < glyph_views_.size(); ++i) {
@@ -52,12 +54,14 @@ public:
     IndexedGlyphSet& operator=(const IndexedGlyphSet& other) = delete;
 
     IndexedGlyphSet(IndexedGlyphSet&& other) noexcept = default;
-    IndexedGlyphSet& operator=(IndexedGlyphSet&& other) noexcept = default;
+    IndexedGlyphSet& operator=(IndexedGlyphSet&& other) noexcept = delete;
 
-    size_t glyph_size() const { return glyph_size_; }
-    size_t size() const { return glyph_views_.size(); }
+    std::string_view glyphs() const noexcept { return _glyphs; }
+    size_t glyph_size() const noexcept { return _glyph_size; }
+    size_t size() const noexcept { return glyph_views_.size(); }
+    std::string_view name() const noexcept { return _name; }
 
-    unsigned to_index(std::string_view glyph) const
+    unsigned to_index(const std::string_view glyph) const
     {
         auto it = glyph_to_index_.find(glyph);
         if (it == glyph_to_index_.end())
@@ -65,14 +69,14 @@ public:
         return it->second;
     }
 
-    std::string_view from_index(unsigned index) const
+    std::string_view from_index(const unsigned index) const
     {
         if (index >= glyph_views_.size())
             throw std::out_of_range("IndexedGlyphSet: index out of range");
         return glyph_views_[index];
     }
 
-    bool contains(std::string_view glyph) const
+    bool contains(const std::string_view glyph) const
     {
         return glyph_to_index_.count(glyph) != 0;
     }
@@ -80,9 +84,42 @@ public:
     auto begin() const { return glyph_views_.begin(); }
     auto end() const { return glyph_views_.end(); }
 
+    // --- Added SIMD glyph index validation method ---
+    bool validateGlyphIndexesSIMD(const unsigned* indexes, size_t count) const
+    {
+        if (_glyphs.empty()) return count == 0;
+
+        const unsigned maxValid = static_cast<unsigned>(glyph_views_.size() - 1);
+
+#ifdef __AVX2__
+        size_t i = 0;
+        __m256i maxVec = _mm256_set1_epi32(maxValid);
+
+        for (; i + 8 <= count; i += 8) {
+            __m256i vals = _mm256_loadu_si256(reinterpret_cast<const __m256i*>(indexes + i));
+            __m256i cmp = _mm256_cmpgt_epi32(vals, maxVec);
+            if (!_mm256_testz_si256(cmp, cmp)) {
+                return false;
+            }
+        }
+        // tail scalar
+        for (; i < count; ++i) {
+            if (indexes[i] > maxValid) return false;
+        }
+        return true;
+#else
+        for (size_t i = 0; i < count; ++i) {
+            if (indexes[i] > maxValid) return false;
+        }
+        return true;
+#endif
+    }
+
 private:
-    size_t glyph_size_;
-    std::string backing_;  // owns all glyph data
+    const size_t _glyph_size;
+    const std::string _glyphs;  // owns all glyph data
+    const std::string _name;
+
     std::vector<std::string_view> glyph_views_;  // index → glyph (view into backing_)
     std::unordered_map<std::string_view, unsigned> glyph_to_index_;  // glyph → index
 

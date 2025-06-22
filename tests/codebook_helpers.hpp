@@ -22,5 +22,5 @@ inline IndexedGlyphSet codebook_from_cps(std::initializer_list<uint32_t> cps) {
             glyphs += static_cast<char>(0x80 | (cp & 0x3F));
         }
     }
-    return IndexedGlyphSet(std::move(glyphs));
+    return IndexedGlyphSet("test", std::move(glyphs));
 }

@@ -75,6 +75,8 @@ public:
         return (this->*_decode_func)(utf8_input);
     }
 
+    std::string_view getGlyphSetName()const { return _glyph_set->name(); }
+
     bool operator==(const GlyphFPECipher& other) const noexcept {
         // TODO: Do better
         return this == &other;
