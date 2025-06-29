@@ -42,32 +42,30 @@ std::vector<DigitType> generate_invalid_digits(unsigned int radix) {
     return digits;
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher encrypt/decrypt roundtrip", "[FF1Cipher]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
+TEST_CASE("FF1Cipher encrypt/decrypt roundtrip", "[FF1Cipher]") {
+
 
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
     unsigned int radix = 10;
 
-    FF1Cipher<DigitType> cipher(key, tweak, radix);
-    auto data = generate_valid_digits<DigitType>(radix, 10);
+    FF1Cipher cipher(key, tweak, radix);
+    auto data = generate_valid_digits<uint32_t>(radix, 10);
 
     auto encrypted = cipher.encrypt(std::move(data));
     auto decrypted = cipher.decrypt(std::move(encrypted));
 
-    REQUIRE(decrypted == generate_valid_digits<DigitType>(radix, 10));
+    REQUIRE(decrypted == generate_valid_digits<uint32_t>(radix, 10));
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher different inputs produce different ciphertexts", "[FF1Cipher]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
-
+TEST_CASE("FF1Cipher different inputs produce different ciphertexts", "[FF1Cipher]") {
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
     unsigned int radix = 10;
 
-    FF1Cipher<DigitType> cipher(key, tweak, radix);
-    std::vector<DigitType> a = generate_valid_digits<DigitType>(radix, 3);
-    std::vector<DigitType> b = {a[2], a[1], a[0]};
+    FF1Cipher cipher(key, tweak, radix);
+    std::vector<uint32_t> a = generate_valid_digits<uint32_t>(radix, 3);
+    std::vector<uint32_t> b = {a[2], a[1], a[0]};
 
     auto ea = cipher.encrypt(std::move(a));
     auto eb = cipher.encrypt(std::move(b));
@@ -75,15 +73,14 @@ TEMPLATE_TEST_CASE("FF1Cipher different inputs produce different ciphertexts", "
     REQUIRE(ea != eb);
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher handles empty input", "[FF1Cipher]", uint32_t) {
-    using DigitType = TestType;
+TEST_CASE("FF1Cipher handles empty input", "[FF1Cipher]") {
 
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
     unsigned int radix = 10;
 
-    FF1Cipher<DigitType> cipher(key, tweak, radix);
-    std::vector<DigitType> empty;
+    FF1Cipher cipher(key, tweak, radix);
+    std::vector<uint32_t> empty;
     auto enc = cipher.encrypt(std::move(empty));
     auto dec = cipher.decrypt(std::move(enc));
 
@@ -95,25 +92,24 @@ TEST_CASE("FF1Cipher rejects invalid keys", "[FF1Cipher]") {
     std::vector<uint8_t> long_key(33, 0x01); // 264-bit key
     auto tweak = fixed_tweak();
 
-    REQUIRE_THROWS_AS(FF1Cipher<uint32_t>(short_key, tweak, 10), std::invalid_argument);
-    REQUIRE_THROWS_AS(FF1Cipher<uint32_t>(long_key, tweak, 10), std::invalid_argument);
+    REQUIRE_THROWS_AS(FF1Cipher(short_key, tweak, 10), std::invalid_argument);
+    REQUIRE_THROWS_AS(FF1Cipher(long_key, tweak, 10), std::invalid_argument);
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher works with various radices", "[FF1Cipher]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
+TEST_CASE("FF1Cipher works with various radices", "[FF1Cipher]") {
 
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
 
     for (unsigned radix : {2, 10, 16, 36, 62}) {
-        FF1Cipher<DigitType> cipher(key, tweak, radix);
-        auto digits = generate_valid_digits<DigitType>(radix, 12);
+        FF1Cipher cipher(key, tweak, radix);
+        auto digits = generate_valid_digits<uint32_t>(radix, 12);
 
         auto encrypted = cipher.encrypt(std::move(digits));
         auto decrypted = cipher.decrypt(std::move(encrypted));
 
         for (unsigned i = 0; i < 12; ++i)
-            REQUIRE(decrypted[i] == static_cast<DigitType>(i % radix));
+            REQUIRE(decrypted[i] == static_cast<uint32_t>(i % radix));
     }
 }
 
@@ -128,15 +124,14 @@ struct ArrayHash {
     }
 };
 
-TEMPLATE_TEST_CASE("FF1Cipher collision test with fixed-length arrays", "[FF1Cipher][collision]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
+TEST_CASE("FF1Cipher collision test with fixed-length arrays", "[FF1Cipher][collision]") {
 
     constexpr unsigned radix = 62;
     constexpr size_t length = 8;
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
 
-    FF1Cipher<DigitType> cipher(key, tweak, radix);
+    FF1Cipher cipher(key, tweak, radix);
 
     std::mt19937 rng(42);
     std::uniform_int_distribution<unsigned> dist(0, radix - 1);
@@ -144,8 +139,8 @@ TEMPLATE_TEST_CASE("FF1Cipher collision test with fixed-length arrays", "[FF1Cip
     std::unordered_set<std::array<unsigned, length>, ArrayHash<length>> seen;
 
     for (int i = 0; i < 10000; ++i) {
-        std::vector<DigitType> input(length);
-        for (auto& d : input) d = static_cast<DigitType>(dist(rng));
+        std::vector<uint32_t> input(length);
+        for (auto& d : input) d = static_cast<uint32_t>(dist(rng));
 
         auto encrypted = cipher.encrypt(std::move(input));
         if (encrypted.size() != length) {
@@ -173,31 +168,30 @@ static std::vector<std::string> load_words_2()
     return words;
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher encode/decode performance benchmark with words", "[ff1cipher][performance]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
+TEST_CASE("FF1Cipher encode/decode performance benchmark with words", "[ff1cipher][performance]") {
 
     constexpr unsigned radix = 62; // assuming radix 62 (0-9, A-Z, a-z)
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
 
-    FF1Cipher<DigitType> cipher(key, tweak, radix);
+    FF1Cipher cipher(key, tweak, radix);
 
     auto words = load_words_2();
 
     // Convert each word to vector<DigitType> based on your radix scheme.
     // Here we assume a function that maps chars to digit values in [0, radix)
-    auto char_to_digit = [](char c) -> DigitType {
-        if (c >= '0' && c <= '9') return static_cast<DigitType>(c - '0');
-        else if (c >= 'A' && c <= 'Z') return static_cast<DigitType>(c - 'A' + 10);
-        else if (c >= 'a' && c <= 'z') return static_cast<DigitType>(c - 'a' + 36);
+    auto char_to_digit = [](char c) -> uint32_t {
+        if (c >= '0' && c <= '9') return static_cast<uint32_t>(c - '0');
+        else if (c >= 'A' && c <= 'Z') return static_cast<uint32_t>(c - 'A' + 10);
+        else if (c >= 'a' && c <= 'z') return static_cast<uint32_t>(c - 'a' + 36);
         else throw std::runtime_error("Invalid character in word");
     };
 
-    std::vector<std::vector<DigitType>> inputs;
+    std::vector<std::vector<uint32_t>> inputs;
     inputs.reserve(words.size());
 
     for (const auto& word : words) {
-        std::vector<DigitType> digits;
+        std::vector<uint32_t> digits;
         digits.reserve(word.size());
         for (char c : word) {
             digits.push_back(char_to_digit(c));
@@ -206,7 +200,7 @@ TEMPLATE_TEST_CASE("FF1Cipher encode/decode performance benchmark with words", "
     }
 
     // Benchmark encoding
-    std::vector<std::vector<DigitType>> encrypted;
+    std::vector<std::vector<uint32_t>> encrypted;
     encrypted.reserve(inputs.size());
 
     auto start_enc = std::chrono::steady_clock::now();
@@ -216,7 +210,7 @@ TEMPLATE_TEST_CASE("FF1Cipher encode/decode performance benchmark with words", "
     auto end_enc = std::chrono::steady_clock::now();
 
     // Benchmark decoding
-    std::vector<std::vector<DigitType>> decrypted;
+    std::vector<std::vector<uint32_t>> decrypted;
     decrypted.reserve(encrypted.size());
 
     auto start_dec = std::chrono::steady_clock::now();
@@ -236,28 +230,25 @@ TEMPLATE_TEST_CASE("FF1Cipher encode/decode performance benchmark with words", "
     double enc_ops_per_sec = inputs.size() / encode_duration.count();
     double dec_ops_per_sec = inputs.size() / decode_duration.count();
 
-    std::cout << "[benchmark] FF1Cipher<"
-              << (std::is_same_v<DigitType, uint8_t> ? "uint8_t" : std::is_same_v<DigitType, uint16_t> ? "uint16_t" : "uint32_t")
-              << "> Encoded " << inputs.size() << " words in " << encode_duration.count() << " seconds (" << enc_ops_per_sec << " ops/s)" << std::endl;
-    std::cout << "[benchmark] FF1Cipher<"
-              << (std::is_same_v<DigitType, uint8_t> ? "uint8_t" : std::is_same_v<DigitType, uint16_t> ? "uint16_t" : "uint32_t")
-              << "> Decoded " << inputs.size() << " words in " << decode_duration.count() << " seconds (" << dec_ops_per_sec << " ops/s)" << std::endl;
+    std::cout << "[benchmark] FF1Cipher Encoded " << inputs.size() << " words in "
+        << encode_duration.count() << " seconds (" << enc_ops_per_sec << " ops/s)" << std::endl;
+
+    std::cout << "[benchmark] FF1Cipher Decoded " << inputs.size() << " words in "
+        << decode_duration.count() << " seconds (" << dec_ops_per_sec << " ops/s)" << std::endl;
 
     CHECK(enc_ops_per_sec > 75000);
     CHECK(dec_ops_per_sec > 75000);
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher decrypt throws or fails on invalid ciphertext", "[FF1Cipher][error]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
-
+TEST_CASE("FF1Cipher decrypt throws or fails on invalid ciphertext", "[FF1Cipher][error]") {
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
     unsigned int radix = 10;
 
-    FF1Cipher<DigitType> cipher(key, tweak, static_cast<DigitType>(radix));
+    FF1Cipher cipher(key, tweak, static_cast<uint32_t>(radix));
 
     // Create invalid ciphertext (values outside radix range)
-    auto invalid_ct = generate_invalid_digits<DigitType>(radix);
+    auto invalid_ct = generate_invalid_digits<uint32_t>(radix);
 
     try {
         auto result = cipher.decrypt(std::move(invalid_ct));
@@ -269,16 +260,15 @@ TEMPLATE_TEST_CASE("FF1Cipher decrypt throws or fails on invalid ciphertext", "[
     }
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher encrypt throws on invalid plaintext digits", "[FF1Cipher][error]", uint8_t, uint16_t, uint32_t) {
-    using DigitType = TestType;
+TEST_CASE("FF1Cipher encrypt throws on invalid plaintext digits", "[FF1Cipher][error]") {
 
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
     unsigned int radix = 10;
 
-    FF1Cipher<DigitType> cipher(key, tweak, static_cast<DigitType>(radix));
+    FF1Cipher cipher(key, tweak, radix);
 
-    auto invalid_pt = generate_invalid_digits<DigitType>(radix);
+    auto invalid_pt = generate_invalid_digits<uint32_t>(radix);
 
     REQUIRE_THROWS_AS(cipher.encrypt(std::move(invalid_pt)), std::invalid_argument);
 }

@@ -4,33 +4,28 @@
 #include <cstring>
 #include <fpe.h>
 
-// Combined validation and conversion helper
-template <typename DigitType>
-static std::vector<unsigned int> validate_and_convert(const std::vector<DigitType>& input, DigitType radix) {
-    std::vector<unsigned int> output(input.size());
+static std::vector<uint32_t> validate_and_convert(const std::vector<uint32_t>& input, uint32_t radix) {
+    std::vector<uint32_t> output(input.size());
     for (size_t i = 0; i < input.size(); ++i) {
         if (input[i] >= radix) {
             throw std::invalid_argument("Digit out of range");
         }
-        output[i] = static_cast<unsigned int>(input[i]);
+        output[i] = static_cast<uint32_t>(input[i]);
     }
     return output;
 }
 
-// Conversion back helper remains unchanged
-template <typename DigitType>
-static std::vector<DigitType> from_uint_vec(const std::vector<unsigned int>& input) {
-    std::vector<DigitType> out(input.size());
+static std::vector<uint32_t> from_uint_vec(const std::vector<uint32_t>& input) {
+    std::vector<uint32_t> out(input.size());
     for (size_t i = 0; i < input.size(); ++i)
-        out[i] = static_cast<DigitType>(input[i]);
+        out[i] = static_cast<uint32_t>(input[i]);
     return out;
 }
 
-template <ValidDigitType DigitType>
-FF1Cipher<DigitType>::FF1Cipher(
+FF1Cipher::FF1Cipher(
     const std::vector<uint8_t>& key,
     const std::vector<uint8_t>& tweak,
-    DigitType radix
+    uint32_t radix
 ) : _radix(static_cast<unsigned int>(radix))
 {
     int bits = static_cast<int>(key.size() * 8);
@@ -43,14 +38,13 @@ FF1Cipher<DigitType>::FF1Cipher(
     _valid = true;
 }
 
-template <ValidDigitType DigitType>
-FF1Cipher<DigitType>::~FF1Cipher() noexcept
+
+FF1Cipher::~FF1Cipher() noexcept
 {
     cleanup();
 }
 
-template <ValidDigitType DigitType>
-FF1Cipher<DigitType>::FF1Cipher(FF1Cipher&& other) noexcept
+FF1Cipher::FF1Cipher(FF1Cipher&& other) noexcept
     : _key(other._key)
     , _valid(other._valid)
     , _radix(other._radix)
@@ -59,8 +53,7 @@ FF1Cipher<DigitType>::FF1Cipher(FF1Cipher&& other) noexcept
     std::memset(&other._key, 0, sizeof(FPE_KEY));
 }
 
-template <ValidDigitType DigitType>
-FF1Cipher<DigitType>& FF1Cipher<DigitType>::operator=(FF1Cipher&& other) noexcept
+FF1Cipher& FF1Cipher::operator=(FF1Cipher&& other) noexcept
 {
     if (this != &other)
     {
@@ -75,8 +68,8 @@ FF1Cipher<DigitType>& FF1Cipher<DigitType>::operator=(FF1Cipher&& other) noexcep
     return *this;
 }
 
-template <ValidDigitType DigitType>
-std::vector<DigitType> FF1Cipher<DigitType>::encrypt(std::vector<DigitType>&& digits) const
+
+std::vector<uint32_t> FF1Cipher::encrypt(std::vector<uint32_t>&& digits) const
 {
     if (!_valid)
         throw std::logic_error("FF1Cipher not initialized");
@@ -86,7 +79,7 @@ std::vector<DigitType> FF1Cipher<DigitType>::encrypt(std::vector<DigitType>&& di
 
 
     // Combined validation and conversion
-    auto input_u32 = validate_and_convert(digits, static_cast<DigitType>(_radix));
+    auto input_u32 = validate_and_convert(digits, static_cast<uint32_t>(_radix));
     std::vector<unsigned int> out(input_u32.size());
 
     FPE_ff1_encrypt(
@@ -97,11 +90,10 @@ std::vector<DigitType> FF1Cipher<DigitType>::encrypt(std::vector<DigitType>&& di
         FPE_ENCRYPT
     );
 
-    return from_uint_vec<DigitType>(out);
+    return from_uint_vec(out);
 }
 
-template <ValidDigitType DigitType>
-std::vector<DigitType> FF1Cipher<DigitType>::decrypt(std::vector<DigitType>&& digits) const
+std::vector<uint32_t> FF1Cipher::decrypt(std::vector<uint32_t>&& digits) const
 {
     if (!_valid)
         throw std::logic_error("FF1Cipher not initialized");
@@ -110,22 +102,21 @@ std::vector<DigitType> FF1Cipher<DigitType>::decrypt(std::vector<DigitType>&& di
         return std::move(digits);
 
     // Combined validation and conversion
-    auto input_u32 = validate_and_convert(digits, static_cast<DigitType>(_radix));
+    auto input_u32 = validate_and_convert(digits, static_cast<uint32_t>(_radix));
     std::vector<unsigned int> out(input_u32.size());
 
     FPE_ff1_encrypt(
         input_u32.data(),
         out.data(),
         static_cast<unsigned int>(input_u32.size()),
-        const_cast<FPE_KEY*>(&_key),
+        &_key,
         FPE_DECRYPT
     );
 
-    return from_uint_vec<DigitType>(out);
+    return from_uint_vec(out);
 }
 
-template <ValidDigitType DigitType>
-void FF1Cipher<DigitType>::cleanup() noexcept
+void FF1Cipher::cleanup() noexcept
 {
     if (_valid)
     {
@@ -133,8 +124,3 @@ void FF1Cipher<DigitType>::cleanup() noexcept
         _valid = false;
     }
 }
-
-// Explicit template instantiations
-template class FF1Cipher<std::uint8_t>;
-template class FF1Cipher<std::uint16_t>;
-template class FF1Cipher<std::uint32_t>;

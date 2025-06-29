@@ -1,20 +1,14 @@
 #pragma once
 
 #include <vector>
-#include <concepts>
 #include <cstdint>
 #include <fpe.h>
 
-// Concept to constrain DigitType to valid integral types
-template<typename T>
-concept ValidDigitType = std::same_as<T, std::uint8_t> || std::same_as<T, std::uint16_t> || std::same_as<T, std::uint32_t>;
-
-template <ValidDigitType DigitType = std::uint32_t>
 class FF1Cipher
 {
   public:
     FF1Cipher(
-        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, DigitType radix
+        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, uint32_t radix
     );
     ~FF1Cipher() noexcept;
 
@@ -23,14 +17,13 @@ class FF1Cipher
     FF1Cipher(FF1Cipher&&) noexcept;
     FF1Cipher& operator=(FF1Cipher&&) noexcept;
 
-    // Use DigitType for inputs and outputs
-    std::vector<DigitType> encrypt(std::vector<DigitType>&& digits) const;
-    std::vector<DigitType> decrypt(std::vector<DigitType>&& digits) const;
+    std::vector<uint32_t> encrypt(std::vector<uint32_t>&& digits) const;
+    std::vector<uint32_t> decrypt(std::vector<uint32_t>&& digits) const;
 
   private:
     mutable FPE_KEY _key{};
     bool _valid = false;
-    DigitType _radix = 10;
+    uint32_t _radix = 10;
 
     void cleanup() noexcept;
 };
