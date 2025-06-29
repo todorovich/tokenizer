@@ -4,6 +4,7 @@
 
 #include <string_view>
 #include <cstdint>
+#include <cstring>
 #include <utility>
 
 std::pair<uint32_t, size_t> decode_utf8_glyph(std::string_view str, size_t pos)
@@ -79,10 +80,36 @@ std::vector<uint32_t> UnicodeFPECipher::parse_and_dispatch(std::string_view inpu
     size_t pos = 0;
     size_t cipher_count = cipher_index.glyph_ciphers.size() + 1; // +1 for noop cipher
 
-    cipher_buffers.resize(cipher_count);
-    std::vector<uint32_t> glyph_cipher_indices;
-    glyph_cipher_indices.reserve(input.size() / 2);
+    // --- First pass: count total bytes per cipher ---
+    std::vector<size_t> cipher_byte_counts(cipher_count, 0);
+    size_t glyph_count = 0;
 
+    size_t temp_pos = 0;
+    while (temp_pos < input.size())
+    {
+        auto [cp, glyph_len] = decode_utf8_glyph(input, temp_pos);
+        uint32_t cidx = cipher_index[cp] == cipher_index.noop_cipher
+                            ? static_cast<uint32_t>(cipher_count - 1)
+                            : static_cast<uint32_t>(&cipher_index[cp] - &cipher_index.glyph_ciphers[0]);
+
+        cipher_byte_counts[cidx] += glyph_len;
+        temp_pos += glyph_len;
+        ++glyph_count;
+    }
+
+    // --- Prepare cipher_buffers with preallocated capacity ---
+    cipher_buffers.resize(cipher_count);
+    for (size_t i = 0; i < cipher_count; ++i)
+    {
+        cipher_buffers[i].reserve(cipher_byte_counts[i]);
+    }
+
+    // --- Prepare glyph_cipher_indices with exact capacity ---
+    std::vector<uint32_t> glyph_cipher_indices;
+    glyph_cipher_indices.reserve(glyph_count);
+
+    // --- Second pass: append glyphs to cipher buffers and record indices ---
+    pos = 0;
     while (pos < input.size())
     {
         auto [cp, glyph_len] = decode_utf8_glyph(input, pos);
@@ -97,7 +124,6 @@ std::vector<uint32_t> UnicodeFPECipher::parse_and_dispatch(std::string_view inpu
 
     return glyph_cipher_indices;
 }
-
 void UnicodeFPECipher::encrypt_cipher_buffers(std::vector<std::string>& cipher_buffers)
 {
     size_t cipher_count = cipher_buffers.size();
@@ -125,16 +151,15 @@ std::string UnicodeFPECipher::reassemble_output(
     size_t cipher_count = cipher_buffers.size();
     std::vector<size_t> cipher_offsets(cipher_count, 0);
 
-    std::string output;
-    output.reserve(
-        std::accumulate(
-            cipher_buffers.begin(),
-            cipher_buffers.end(),
-            0,
-            [](size_t sum, const std::string& s) { return sum + s.size(); }
-            )
-        );
+    // Pre-calculate total output size
+    size_t total_size = 0;
+    for (const auto& s : cipher_buffers)
+        total_size += s.size();
 
+    std::string output;
+    output.resize(total_size);  // Pre-allocate output size exactly
+
+    size_t output_pos = 0;
     for (uint32_t cidx : glyph_cipher_indices)
     {
         const GlyphFPECipher& cipher = (cidx == cipher_count - 1)
@@ -144,8 +169,11 @@ std::string UnicodeFPECipher::reassemble_output(
         size_t glyph_len = cipher.glyphs().glyph_size();
 
         size_t offset = cipher_offsets[cidx];
-        output.append(cipher_buffers[cidx].data() + offset, glyph_len);
+        // Copy glyph_len bytes from cipher_buffers[cidx] + offset to output + output_pos
+        std::memcpy(&output[output_pos], cipher_buffers[cidx].data() + offset, glyph_len);
+
         cipher_offsets[cidx] += glyph_len;
+        output_pos += glyph_len;
     }
 
     return output;

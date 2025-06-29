@@ -4,9 +4,11 @@ target_sources(encryption_test
         test_IndexedGlyphSet.cpp
         test_FF1Cipher.cpp
         test_GlyphFPECipher.cpp
+        test_Performance.cpp
         test_UnicodeGlyphCipherIndex.cpp
         test_UnicodeFPECipher.cpp
 )
+
 target_link_libraries(encryption_test
     PRIVATE
         main_library

@@ -1,13 +1,12 @@
 # TOKENIZER
 
-
-
 target_sources(main_library
   PRIVATE
     AES256ECB.cpp
     Base64.cpp
     FF1Cipher.cpp
     UnicodeFPECipher.cpp
+    PreconfiguredIndexedGlyphSet.cpp
     WebServer.cpp
   PUBLIC
     AES256ECB.hpp
@@ -17,6 +16,7 @@ target_sources(main_library
     IndexedGlyphSet.hpp
     FF1Cipher.hpp
     GlyphFPECipher.hpp
+    PreconfiguredIndexedGlyphSet.hpp
     UnicodeGlyphCipherIndex.hpp
     WebServer.hpp
 )

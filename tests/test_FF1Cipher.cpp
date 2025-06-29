@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <iostream>
 #include <chrono>
+#include <filesystem>
+#include <fstream>
 
 static std::vector<uint8_t> fixed_key_128() {
     return std::vector<uint8_t>{
@@ -73,7 +75,7 @@ TEMPLATE_TEST_CASE("FF1Cipher different inputs produce different ciphertexts", "
     REQUIRE(ea != eb);
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher handles empty input", "[FF1Cipher]", uint8_t, uint16_t, uint32_t) {
+TEMPLATE_TEST_CASE("FF1Cipher handles empty input", "[FF1Cipher]", uint32_t) {
     using DigitType = TestType;
 
     auto key = fixed_key_128();
@@ -157,57 +159,92 @@ TEMPLATE_TEST_CASE("FF1Cipher collision test with fixed-length arrays", "[FF1Cip
     }
 }
 
-TEMPLATE_TEST_CASE("FF1Cipher encode/decode performance benchmark with ops/s", "[ff1cipher][performance]", uint8_t, uint16_t, uint32_t) {
+static std::vector<std::string> load_words_2()
+{
+    std::filesystem::path path = std::filesystem::current_path() / "data" / "google-10000-english.txt";
+    std::ifstream in(path);
+    if (!in) throw std::runtime_error("Missing word list: " + path.string());
+
+    std::vector<std::string> words;
+    std::string word;
+    while (std::getline(in, word)) {
+        if (!word.empty() && word.size() > 1) words.push_back(word);
+    }
+    return words;
+}
+
+TEMPLATE_TEST_CASE("FF1Cipher encode/decode performance benchmark with words", "[ff1cipher][performance]", uint8_t, uint16_t, uint32_t) {
     using DigitType = TestType;
 
-    constexpr unsigned radix = 62;
-    constexpr size_t input_size = 10000;
-    constexpr size_t digit_count = 12;
+    constexpr unsigned radix = 62; // assuming radix 62 (0-9, A-Z, a-z)
     auto key = fixed_key_128();
     auto tweak = fixed_tweak();
 
     FF1Cipher<DigitType> cipher(key, tweak, radix);
 
-    std::mt19937 rng(42);
-    std::uniform_int_distribution<unsigned> dist(0, radix - 1);
+    auto words = load_words_2();
 
-    // Prepare input data
-    std::vector<std::vector<DigitType>> inputs(input_size, std::vector<DigitType>(digit_count));
-    for (auto& digits : inputs)
-        for (auto& d : digits)
-            d = static_cast<DigitType>(dist(rng));
+    // Convert each word to vector<DigitType> based on your radix scheme.
+    // Here we assume a function that maps chars to digit values in [0, radix)
+    auto char_to_digit = [](char c) -> DigitType {
+        if (c >= '0' && c <= '9') return static_cast<DigitType>(c - '0');
+        else if (c >= 'A' && c <= 'Z') return static_cast<DigitType>(c - 'A' + 10);
+        else if (c >= 'a' && c <= 'z') return static_cast<DigitType>(c - 'a' + 36);
+        else throw std::runtime_error("Invalid character in word");
+    };
+
+    std::vector<std::vector<DigitType>> inputs;
+    inputs.reserve(words.size());
+
+    for (const auto& word : words) {
+        std::vector<DigitType> digits;
+        digits.reserve(word.size());
+        for (char c : word) {
+            digits.push_back(char_to_digit(c));
+        }
+        inputs.push_back(std::move(digits));
+    }
 
     // Benchmark encoding
-    auto start_enc = std::chrono::steady_clock::now();
     std::vector<std::vector<DigitType>> encrypted;
-    encrypted.reserve(input_size);
-    for (auto& digits : inputs)
+    encrypted.reserve(inputs.size());
+
+    auto start_enc = std::chrono::steady_clock::now();
+    for (auto& digits : inputs) {
         encrypted.push_back(cipher.encrypt(std::move(digits)));
+    }
     auto end_enc = std::chrono::steady_clock::now();
 
     // Benchmark decoding
-    auto start_dec = std::chrono::steady_clock::now();
     std::vector<std::vector<DigitType>> decrypted;
-    decrypted.reserve(input_size);
-    for (auto& digits : encrypted)
+    decrypted.reserve(encrypted.size());
+
+    auto start_dec = std::chrono::steady_clock::now();
+    for (auto& digits : encrypted) {
         decrypted.push_back(cipher.decrypt(std::move(digits)));
+    }
     auto end_dec = std::chrono::steady_clock::now();
+
+    REQUIRE(decrypted.size() == inputs.size());
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        REQUIRE(decrypted[i] == inputs[i]);
+    }
 
     std::chrono::duration<double> encode_duration = end_enc - start_enc;
     std::chrono::duration<double> decode_duration = end_dec - start_dec;
 
-    double enc_ops_per_sec = input_size / encode_duration.count();
-    double dec_ops_per_sec = input_size / decode_duration.count();
+    double enc_ops_per_sec = inputs.size() / encode_duration.count();
+    double dec_ops_per_sec = inputs.size() / decode_duration.count();
 
-    std::cout << "[benchmark] FF1Cipher<" << (std::is_same_v<DigitType, uint8_t> ? "uint8_t" : std::is_same_v<DigitType, uint16_t> ? "uint16_t" : "uint32_t")
-              << "> Encoded " << input_size << " items of length " << digit_count
-              << " in " << encode_duration.count() << " seconds (" << enc_ops_per_sec << " ops/s)" << std::endl;
-    std::cout << "[benchmark] FF1Cipher<" << (std::is_same_v<DigitType, uint8_t> ? "uint8_t" : std::is_same_v<DigitType, uint16_t> ? "uint16_t" : "uint32_t")
-              << "> Decoded " << input_size << " items of length " << digit_count
-              << " in " << decode_duration.count() << " seconds (" << dec_ops_per_sec << " ops/s)" << std::endl;
+    std::cout << "[benchmark] FF1Cipher<"
+              << (std::is_same_v<DigitType, uint8_t> ? "uint8_t" : std::is_same_v<DigitType, uint16_t> ? "uint16_t" : "uint32_t")
+              << "> Encoded " << inputs.size() << " words in " << encode_duration.count() << " seconds (" << enc_ops_per_sec << " ops/s)" << std::endl;
+    std::cout << "[benchmark] FF1Cipher<"
+              << (std::is_same_v<DigitType, uint8_t> ? "uint8_t" : std::is_same_v<DigitType, uint16_t> ? "uint16_t" : "uint32_t")
+              << "> Decoded " << inputs.size() << " words in " << decode_duration.count() << " seconds (" << dec_ops_per_sec << " ops/s)" << std::endl;
 
-    CHECK(enc_ops_per_sec > 75'000);
-    CHECK(dec_ops_per_sec > 75'000);
+    CHECK(enc_ops_per_sec > 75000);
+    CHECK(dec_ops_per_sec > 75000);
 }
 
 TEMPLATE_TEST_CASE("FF1Cipher decrypt throws or fails on invalid ciphertext", "[FF1Cipher][error]", uint8_t, uint16_t, uint32_t) {

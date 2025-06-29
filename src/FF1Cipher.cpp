@@ -81,6 +81,10 @@ std::vector<DigitType> FF1Cipher<DigitType>::encrypt(std::vector<DigitType>&& di
     if (!_valid)
         throw std::logic_error("FF1Cipher not initialized");
 
+    if (digits.empty())
+        return std::move(digits);
+
+
     // Combined validation and conversion
     auto input_u32 = validate_and_convert(digits, static_cast<DigitType>(_radix));
     std::vector<unsigned int> out(input_u32.size());
@@ -101,6 +105,9 @@ std::vector<DigitType> FF1Cipher<DigitType>::decrypt(std::vector<DigitType>&& di
 {
     if (!_valid)
         throw std::logic_error("FF1Cipher not initialized");
+
+    if (digits.empty())
+        return std::move(digits);
 
     // Combined validation and conversion
     auto input_u32 = validate_and_convert(digits, static_cast<DigitType>(_radix));

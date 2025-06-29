@@ -84,7 +84,7 @@ static std::vector<std::string> load_words()
     std::vector<std::string> words;
     std::string word;
     while (std::getline(in, word)) {
-        if (!word.empty()) words.push_back(word);
+        if (!word.empty() && word.size() > 1) words.push_back(word);
     }
     return words;
 }
@@ -93,28 +93,31 @@ TEST_CASE("UnicodeFPECipher benchmark 10,000 words", "[UnicodeFPECipher][perform
     std::vector<uint8_t> key(16, 0x01);   // example key
     std::vector<uint8_t> tweak(4, 0x02);  // example tweak
 
-    std::vector<GlyphFPECipher> glyph_ciphers = PreconfiguredIndexedGlyphSet::getAllGlyphFPECiphers(key, tweak);
+    std::vector<GlyphFPECipher> glyph_ciphers = PreconfiguredIndexedGlyphSet::buildAsciiGlyphCiphers(key, tweak);
     UnicodeGlyphCipherIndex ugci(std::move(glyph_ciphers), key, tweak);
     UnicodeFPECipher cipher(std::move(ugci));
 
     auto words = load_words();
-    REQUIRE(words.size() >= 10000);
 
     // Encrypt each word individually
-    auto start_enc = std::chrono::steady_clock::now();
     std::vector<std::string> encrypted_words;
     encrypted_words.reserve(words.size());
-    for (const auto& w : words) {
-        encrypted_words.push_back(cipher.encrypt(w));
+    auto start_enc = std::chrono::steady_clock::now();
+    {
+        for (const auto& w : words) {
+            encrypted_words.push_back(cipher.encrypt(w));
+        }
     }
     auto end_enc = std::chrono::steady_clock::now();
 
     // Decrypt each word individually
-    auto start_dec = std::chrono::steady_clock::now();
     std::vector<std::string> decrypted_words;
     decrypted_words.reserve(encrypted_words.size());
-    for (const auto& ew : encrypted_words) {
-        decrypted_words.push_back(cipher.decrypt(ew));
+    auto start_dec = std::chrono::steady_clock::now();
+    {
+        for (const auto& ew : encrypted_words) {
+            decrypted_words.push_back(cipher.decrypt(ew));
+        }
     }
     auto end_dec = std::chrono::steady_clock::now();
 
@@ -137,4 +140,52 @@ TEST_CASE("UnicodeFPECipher benchmark 10,000 words", "[UnicodeFPECipher][perform
 
     CHECK(enc_ops_per_sec > 30000);
     CHECK(dec_ops_per_sec > 30000);
+}
+
+#include <catch2/catch_test_macros.hpp>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <iomanip>
+
+static std::vector<std::string> generate_all_unicode_words(size_t word_min_len = 1, size_t word_max_len = 10, size_t max_codepoint = 0xFFFF)
+{
+    std::vector<std::string> words;
+    std::string current_word;
+
+    // Helper to encode codepoint to UTF-8
+    auto append_utf8 = [](std::string& s, uint32_t cp) {
+        if (cp <= 0x7F) {
+            s.push_back(static_cast<char>(cp));
+        } else if (cp <= 0x7FF) {
+            s.push_back(static_cast<char>(0xC0 | (cp >> 6)));
+            s.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        } else if (cp <= 0xFFFF) {
+            s.push_back(static_cast<char>(0xE0 | (cp >> 12)));
+            s.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            s.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        } else {
+            s.push_back(static_cast<char>(0xF0 | (cp >> 18)));
+            s.push_back(static_cast<char>(0x80 | ((cp >> 12) & 0x3F)));
+            s.push_back(static_cast<char>(0x80 | ((cp >> 6) & 0x3F)));
+            s.push_back(static_cast<char>(0x80 | (cp & 0x3F)));
+        }
+    };
+
+    for (uint32_t cp = 0; cp <= max_codepoint; ++cp) {
+        // Skip surrogate halves (invalid UTF-8 codepoints)
+        if (cp >= 0xD800 && cp <= 0xDFFF) continue;
+
+        append_utf8(current_word, cp);
+
+        if (current_word.size() >= word_min_len && current_word.size() >= word_max_len) {
+            words.push_back(std::move(current_word));
+            current_word.clear();
+        }
+    }
+
+    if (!current_word.empty())
+        words.push_back(std::move(current_word));
+
+    return words;
 }

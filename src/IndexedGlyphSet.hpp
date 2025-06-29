@@ -39,7 +39,27 @@ public:
         // Check duplicates by comparing adjacent after sort
         for (size_t i = 1; i < glyph_views_.size(); ++i) {
             if (glyph_views_[i] == glyph_views_[i - 1]) {
-                throw std::invalid_argument("IndexedGlyphSet: duplicate glyphs detected");
+                // Format glyph bytes as hex string for clarity
+                const auto& dup = glyph_views_[i];
+                std::string hex_bytes;
+                for (unsigned char c : dup) {
+                    char buf[4];
+                    std::snprintf(buf, sizeof(buf), "%02X ", c);
+                    hex_bytes += buf;
+                }
+
+                std::string glyph_str;
+                // For printable ASCII glyphs, show as characters too
+                bool printable = std::all_of(dup.begin(), dup.end(), [](char ch) { return std::isprint(static_cast<unsigned char>(ch)); });
+                if (printable) {
+                    glyph_str = std::string(dup);
+                }
+
+                throw std::invalid_argument(
+                    "IndexedGlyphSet: duplicate glyph detected at indices " + std::to_string(i - 1) + " and " + std::to_string(i) +
+                    " Glyph bytes (hex): " + hex_bytes +
+                    (printable ? " Glyph text: \"" + glyph_str + "\"" : "")
+                );
             }
         }
 
@@ -57,6 +77,7 @@ public:
     IndexedGlyphSet& operator=(IndexedGlyphSet&& other) noexcept = delete;
 
     std::string_view glyphs() const noexcept { return _glyphs; }
+    const char* data() const noexcept { return _glyphs.c_str(); }
     size_t glyph_size() const noexcept { return _glyph_size; }
     size_t size() const noexcept { return glyph_views_.size(); }
     std::string_view name() const noexcept { return _name; }
