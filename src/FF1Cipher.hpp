@@ -8,7 +8,7 @@ class FF1Cipher
 {
   public:
     FF1Cipher(
-        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, uint32_t radix
+        const std::vector<uint8_t>& key, const std::vector<uint8_t>& tweak, int32_t radix
     );
     ~FF1Cipher() noexcept;
 
@@ -23,7 +23,7 @@ class FF1Cipher
   private:
     mutable FPE_KEY _key{};
     bool _valid = false;
-    uint32_t _radix = 10;
+    int32_t _radix = 10;
 
     void cleanup() noexcept;
 };

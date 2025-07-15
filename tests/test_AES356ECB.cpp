@@ -8,7 +8,7 @@
 #include <iostream>
 
 static std::vector<std::string> load_words() {
-	std::filesystem::path path = std::filesystem::current_path() / "data" / "google-10000-english.txt";
+	std::filesystem::path path = std::filesystem::current_path()/ ".." / "data" / "google-10000-english.txt";
 	std::ifstream in(path);
 	if (!in) throw std::runtime_error("Missing word list: " + path.string());
 

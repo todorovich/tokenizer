@@ -3,32 +3,26 @@
 #include <utility>
 #include <cstring>
 #include <fpe.h>
+#include <vector>
 
-static std::vector<uint32_t> validate_and_convert(const std::vector<uint32_t>& input, uint32_t radix) {
-    std::vector<uint32_t> output(input.size());
-    for (size_t i = 0; i < input.size(); ++i) {
-        if (input[i] >= radix) {
-            throw std::invalid_argument("Digit out of range");
+namespace {
+    // Validates and converts digits in-place (no extra copy)
+    void validate_digits(const std::vector<uint32_t>& input, const uint32_t radix) {
+        for (const auto digit : input) {
+            if (digit >= radix) {
+                throw std::invalid_argument("Digit out of range");
+            }
         }
-        output[i] = static_cast<uint32_t>(input[i]);
     }
-    return output;
-}
-
-static std::vector<uint32_t> from_uint_vec(const std::vector<uint32_t>& input) {
-    std::vector<uint32_t> out(input.size());
-    for (size_t i = 0; i < input.size(); ++i)
-        out[i] = static_cast<uint32_t>(input[i]);
-    return out;
 }
 
 FF1Cipher::FF1Cipher(
     const std::vector<uint8_t>& key,
     const std::vector<uint8_t>& tweak,
-    uint32_t radix
-) : _radix(static_cast<unsigned int>(radix))
+    const int32_t radix
+) : _radix(radix)
 {
-    int bits = static_cast<int>(key.size() * 8);
+    const int bits = static_cast<int>(key.size() * 8);
     if (bits != 128 && bits != 192 && bits != 256)
         throw std::invalid_argument("FF1Cipher: Key must be 128, 192, or 256 bits");
 
@@ -37,7 +31,6 @@ FF1Cipher::FF1Cipher(
 
     _valid = true;
 }
-
 
 FF1Cipher::~FF1Cipher() noexcept
 {
@@ -68,52 +61,50 @@ FF1Cipher& FF1Cipher::operator=(FF1Cipher&& other) noexcept
     return *this;
 }
 
-
 std::vector<uint32_t> FF1Cipher::encrypt(std::vector<uint32_t>&& digits) const
 {
     if (!_valid)
         throw std::logic_error("FF1Cipher not initialized");
-
     if (digits.empty())
         return std::move(digits);
 
+    validate_digits(digits, _radix);
 
-    // Combined validation and conversion
-    auto input_u32 = validate_and_convert(digits, static_cast<uint32_t>(_radix));
-    std::vector<unsigned int> out(input_u32.size());
+    // Allocate output buffer
+    std::vector<uint32_t> out(digits.size());
 
+    // reinterpret_cast is safe if sizeof(uint32_t) == sizeof(unsigned int)
     FPE_ff1_encrypt(
-        input_u32.data(),
-        out.data(),
-        static_cast<unsigned int>(input_u32.size()),
+        digits.data(),
+        reinterpret_cast<unsigned int*>(out.data()),
+        static_cast<unsigned int>(digits.size()),
         const_cast<FPE_KEY*>(&_key),
         FPE_ENCRYPT
     );
 
-    return from_uint_vec(out);
+    return out;
 }
 
 std::vector<uint32_t> FF1Cipher::decrypt(std::vector<uint32_t>&& digits) const
 {
     if (!_valid)
         throw std::logic_error("FF1Cipher not initialized");
-
     if (digits.empty())
         return std::move(digits);
 
-    // Combined validation and conversion
-    auto input_u32 = validate_and_convert(digits, static_cast<uint32_t>(_radix));
-    std::vector<unsigned int> out(input_u32.size());
+    validate_digits(digits, _radix);
+
+    std::vector<uint32_t> out(digits.size());
 
     FPE_ff1_encrypt(
-        input_u32.data(),
-        out.data(),
-        static_cast<unsigned int>(input_u32.size()),
+        digits.data(),
+        reinterpret_cast<unsigned int*>(out.data()),
+        static_cast<unsigned int>(digits.size()),
         &_key,
         FPE_DECRYPT
     );
 
-    return from_uint_vec(out);
+    return out;
 }
 
 void FF1Cipher::cleanup() noexcept

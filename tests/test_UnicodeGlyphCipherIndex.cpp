@@ -45,6 +45,7 @@ TEST_CASE("UnicodeGlyphCipherIndex: unmapped codepoint returns noop cipher") {
     REQUIRE(&c3 == &ugci.noop_cipher);
 }
 
+// TODO: this should actually test overlap
 TEST_CASE("UnicodeGlyphCipherIndex: overlapping codepoint, first codebook wins") {
     uint32_t cp = 0x61; // 'a'
     auto book1 = codebook_from_cps({cp, 0x63});  // 'a', 'c'

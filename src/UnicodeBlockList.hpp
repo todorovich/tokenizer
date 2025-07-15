@@ -8,7 +8,6 @@ struct UnicodeBlock {
     uint32_t end;
 };
 
-
 constexpr UnicodeBlock unicode_blocks[] = {
     {"Basic Latin", 0x0000, 0x007F},
     {"Latin-1 Supplement", 0x0080, 0x00FF},
@@ -109,7 +108,6 @@ constexpr UnicodeBlock unicode_blocks[] = {
     {"Miscellaneous Symbols and Arrows", 0x2B00, 0x2BFF},
     {"Glagolitic", 0x2C00, 0x2C5F},
     {"Latin Extended-C", 0x2C60, 0x2C7F},
-        {"Coptic", 0x2C80, 0x2CFF},
     {"Georgian Supplement", 0x2D00, 0x2D2F},
     {"Tifinagh", 0x2D30, 0x2D7F},
     {"Ethiopic Extended", 0x2D80, 0x2DDF},
@@ -199,7 +197,7 @@ constexpr UnicodeBlock unicode_blocks[] = {
     {"Linear A", 0x10600, 0x1077F},
     {"Latin Extended-F", 0x10780, 0x107BF},
     {"Cypriot Syllabary", 0x10800, 0x1083F},
-        {"Imperial Aramaic", 0x10840, 0x1085F},
+    {"Imperial Aramaic", 0x10840, 0x1085F},
     {"Palmyrene", 0x10860, 0x1087F},
     {"Nabataean", 0x10880, 0x108AF},
     {"Hatran", 0x108E0, 0x108FF},
@@ -320,18 +318,18 @@ constexpr UnicodeBlock unicode_blocks[] = {
     {"Chess Symbols", 0x1FA00, 0x1FA6F},
     {"Symbols and Pictographs Extended-A", 0x1FA70, 0x1FAFF},
     {"Symbols for Legacy Computing", 0x1FB00, 0x1FBFF},
-    {"CJK Unified Ideographs Extension B", 0x20000, 0x2A6DF},
-    {"CJK Unified Ideographs Extension C", 0x2A700, 0x2B73F},
-    {"CJK Unified Ideographs Extension D", 0x2B740, 0x2B81F},
-    {"CJK Unified Ideographs Extension E", 0x2B820, 0x2CEAF},
-    {"CJK Unified Ideographs Extension F", 0x2CEB0, 0x2EBEF},
-    {"CJK Compatibility Ideographs Supplement", 0x2F800, 0x2FA1F},
-    {"CJK Unified Ideographs Extension G", 0x30000, 0x3134F},
-    {"CJK Unified Ideographs Extension H", 0x31350, 0x323AF},
-    {"Tags", 0xE0000, 0xE007F},
-    {"Variation Selectors Supplement", 0xE0100, 0xE01EF},
-    {"Supplementary Private Use Area-A", 0xF0000, 0xFFFFF},
-    {"Supplementary Private Use Area-B", 0x100000, 0x10FFFF}
+    //{"CJK Unified Ideographs Extension B", 0x20000, 0x2A6DF},
+    //{"CJK Unified Ideographs Extension C", 0x2A700, 0x2B73F},
+    //{"CJK Unified Ideographs Extension D", 0x2B740, 0x2B81F},
+    //{"CJK Unified Ideographs Extension E", 0x2B820, 0x2CEAF},
+    //{"CJK Unified Ideographs Extension F", 0x2CEB0, 0x2EBEF},
+    //{"CJK Compatibility Ideographs Supplement", 0x2F800, 0x2FA1F},
+    //{"CJK Unified Ideographs Extension G", 0x30000, 0x3134F},
+    //{"CJK Unified Ideographs Extension H", 0x31350, 0x323AF},
+    //{"Tags", 0xE0000, 0xE007F},
+    //{"Variation Selectors Supplement", 0xE0100, 0xE01EF},
+    //{"Supplementary Private Use Area-A", 0xF0000, 0xFFFFF},
+    //{"Supplementary Private Use Area-B", 0x100000, 0x10FFFF}
 };
 
 constexpr size_t unicode_blocks_count = sizeof(unicode_blocks) / sizeof(unicode_blocks[0]);

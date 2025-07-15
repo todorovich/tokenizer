@@ -7,14 +7,15 @@
 #include <stdexcept>
 #include "GlyphFPECipher.hpp"
 
-inline uint32_t decode_utf8(std::string_view glyph) {
-    const auto* s = reinterpret_cast<const unsigned char*>(glyph.data());
+inline uint32_t decode_utf8(std::string_view glyph)
+{
+    const unsigned char* s = reinterpret_cast<const unsigned char*>(glyph.data());
     size_t len = glyph.size();
     if (len == 1) return s[0];
     if (len == 2) return ((s[0] & 0x1F) << 6) | (s[1] & 0x3F);
     if (len == 3) return ((s[0] & 0x0F) << 12) | ((s[1] & 0x3F) << 6) | (s[2] & 0x3F);
-    if (len == 4) return ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12) |
-                        ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
+    if (len == 4) return ((s[0] & 0x07) << 18) | ((s[1] & 0x3F) << 12)
+                 | ((s[2] & 0x3F) << 6) | (s[3] & 0x3F);
     throw std::runtime_error("Invalid UTF-8 glyph for code point extraction");
 }
 
@@ -34,12 +35,17 @@ public:
         _codepoint_to_glyph_cipher = new uint32_t[0x110000];
         std::fill_n(_codepoint_to_glyph_cipher, 0x110000, UINT32_MAX);
 
-        for (uint32_t idx = 0; idx < glyph_ciphers.size(); ++idx) {
+        for (uint32_t idx = 0; idx < glyph_ciphers.size(); ++idx)
+        {
             const auto& codebook = glyph_ciphers[idx].glyphs();
-            for (size_t i = 0; i < codebook.size(); ++i) {
-                uint32_t cp = decode_utf8(codebook.from_index(i));
-                if (_codepoint_to_glyph_cipher[cp] == UINT32_MAX)  // first codebook wins
-                    _codepoint_to_glyph_cipher[cp] = idx;
+            for (size_t i = 0; i < codebook.size(); ++i)
+            {
+                auto glyph = codebook.from_index(i);
+                uint32_t cp = decode_utf8(glyph);
+
+                if (_codepoint_to_glyph_cipher[cp] != UINT32_MAX)
+                    throw std::invalid_argument("Code point assigned to multiple glyph sets: " + std::to_string(cp));
+                _codepoint_to_glyph_cipher[cp] = idx;
             }
         }
     }

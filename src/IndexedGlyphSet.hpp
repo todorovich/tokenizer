@@ -11,38 +11,41 @@
 // TODO: performance can be better.
 class IndexedGlyphSet
 {
-public:
-    // Construct from a flat UTF-8 string of concatenated glyphs,
-    // all glyphs must be the same byte length (inferred from first glyph)
-    explicit IndexedGlyphSet(std::string&& name, std::string&& flat_glyphs)
-        : _glyph_size(get_glyph_size(flat_glyphs))
-        , _glyphs(std::move(flat_glyphs))
-        , _name(std::move(name))
+    static int utf8CharLen(unsigned char c) {
+        if ((c & 0x80) == 0x00) return 1;
+        if ((c & 0xE0) == 0xC0) return 2;
+        if ((c & 0xF0) == 0xE0) return 3;
+        if ((c & 0xF8) == 0xF0) return 4;
+        throw std::runtime_error("Invalid UTF-8 encoding");
+    }
+
+    static void verifyUniformUtf8CharWidth(const std::string& utf8str)
     {
-        if (_glyphs.empty())
-            throw std::invalid_argument("IndexedGlyphSet: input string empty");
+        int expectedLen = -1;
+        for (size_t i = 0; i < utf8str.size();)
+        {
+            int charLen = utf8CharLen(static_cast<unsigned char>(utf8str[i]));
 
-        if (_glyphs.size() < 2)
-            throw std::invalid_argument("IndexedGlyphSet: not enough characters to form an indexed set, requires as size >1");
+            if (expectedLen == -1)
+                expectedLen = charLen;
 
-        if (_glyphs.size() % _glyph_size != 0)
-            throw std::invalid_argument("IndexedGlyphSet: invalid glyph size or input length");
+            if (charLen != expectedLen)
+                throw std::runtime_error("Inconsistent UTF-8 character widths");
 
-        const size_t num_glyphs = _glyphs.size() / _glyph_size;
-        glyph_views_.reserve(num_glyphs);
+            i += charLen;
+        }
+    }
 
-        for (size_t i = 0; i < num_glyphs; ++i)
-            glyph_views_.emplace_back(&_glyphs[i * _glyph_size], _glyph_size);
-
-        std::ranges::sort(glyph_views_);
-
+    void _check_for_duplicates() const
+    {
         // Check duplicates by comparing adjacent after sort
-        for (size_t i = 1; i < glyph_views_.size(); ++i) {
-            if (glyph_views_[i] == glyph_views_[i - 1]) {
+        for (size_t i = 1; i < _glyphs.size(); ++i) {
+            if (_glyphs[i] == _glyphs[i - 1]) {
                 // Format glyph bytes as hex string for clarity
-                const auto& dup = glyph_views_[i];
+                const auto& dup = _glyphs[i];
                 std::string hex_bytes;
-                for (unsigned char c : dup) {
+                for (unsigned char c : dup)
+                {
                     char buf[4];
                     std::snprintf(buf, sizeof(buf), "%02X ", c);
                     hex_bytes += buf;
@@ -62,10 +65,40 @@ public:
                 );
             }
         }
+    }
 
-        // Build map
-        for (unsigned i = 0; i < glyph_views_.size(); ++i)
-            glyph_to_index_[glyph_views_[i]] = i;
+public:
+    // Construct from a flat UTF-8 string of concatenated glyphs,
+    // all glyphs must be the same byte length (inferred from first glyph)
+    explicit IndexedGlyphSet(std::string&& name, const std::string& flat_glyphs)
+        : _glyph_size(get_glyph_size(flat_glyphs))
+        , _name(std::move(name))
+    {
+        if (flat_glyphs.empty())
+            throw std::invalid_argument("IndexedGlyphSet: input string empty");
+
+        if (flat_glyphs.size() < 2)
+            throw std::invalid_argument("IndexedGlyphSet: not enough characters to form an indexed set, requires as size >1");
+
+        if (flat_glyphs.size() % _glyph_size != 0)
+            throw std::invalid_argument("IndexedGlyphSet: invalid glyph size or input length");
+
+        verifyUniformUtf8CharWidth(flat_glyphs);
+
+        const size_t num_glyphs = flat_glyphs.size() / _glyph_size;
+        _glyphs.reserve(num_glyphs);
+
+        for (size_t i = 0; i < num_glyphs; ++i)
+            _glyphs.emplace_back(&flat_glyphs[i * _glyph_size], _glyph_size);
+
+        std::ranges::sort(_glyphs);
+
+        glyph_to_index_.clear();
+        for (unsigned i = 0; i < _glyphs.size(); ++i) {
+            glyph_to_index_[_glyphs[i]] = i;
+        }
+
+        _check_for_duplicates();
     }
 
     ~IndexedGlyphSet() = default;
@@ -76,15 +109,15 @@ public:
     IndexedGlyphSet(IndexedGlyphSet&& other) noexcept = default;
     IndexedGlyphSet& operator=(IndexedGlyphSet&& other) noexcept = delete;
 
-    std::string_view glyphs() const noexcept { return _glyphs; }
-    const char* data() const noexcept { return _glyphs.c_str(); }
+    std::vector<std::string> glyphs() const noexcept { return _glyphs; }
+    //const char* data() const noexcept { return _glyphs.c_str(); }
     size_t glyph_size() const noexcept { return _glyph_size; }
-    size_t size() const noexcept { return glyph_views_.size(); }
+    size_t size() const noexcept { return _glyphs.size(); }
     std::string_view name() const noexcept { return _name; }
 
     unsigned to_index(const std::string_view glyph) const
     {
-        auto it = glyph_to_index_.find(glyph);
+        const auto it = glyph_to_index_.find(glyph);
         if (it == glyph_to_index_.end())
             throw std::out_of_range("IndexedGlyphSet: glyph not found");
         return it->second;
@@ -92,25 +125,25 @@ public:
 
     std::string_view from_index(const unsigned index) const
     {
-        if (index >= glyph_views_.size())
+        if (index >= _glyphs.size())
             throw std::out_of_range("IndexedGlyphSet: index out of range");
-        return glyph_views_[index];
+        return _glyphs[index];
     }
 
     bool contains(const std::string_view glyph) const
     {
-        return glyph_to_index_.count(glyph) != 0;
+        return glyph_to_index_.contains(glyph);
     }
 
-    auto begin() const { return glyph_views_.begin(); }
-    auto end() const { return glyph_views_.end(); }
+    auto begin() const { return _glyphs.begin(); }
+    auto end() const { return _glyphs.end(); }
 
     // --- Added SIMD glyph index validation method ---
     bool validateGlyphIndexesSIMD(const unsigned* indexes, size_t count) const
     {
         if (_glyphs.empty()) return count == 0;
 
-        const unsigned maxValid = static_cast<unsigned>(glyph_views_.size() - 1);
+        const auto maxValid = static_cast<unsigned>(_glyphs.size() - 1);
 
 #ifdef __AVX2__
         size_t i = 0;
@@ -138,15 +171,15 @@ public:
 
 private:
     const size_t _glyph_size;
-    const std::string _glyphs;  // owns all glyph data
+    //const std::string _glyphs;  // owns all glyph data
     const std::string _name;
 
-    std::vector<std::string_view> glyph_views_;  // index → glyph (view into backing_)
+    std::vector<std::string> _glyphs;  // index → glyph (view into backing_)
     std::unordered_map<std::string_view, unsigned> glyph_to_index_;  // glyph → index
 
     static size_t get_glyph_size(const std::string& s)
     {
-        unsigned char c = static_cast<unsigned char>(s[0]);
+        const auto c = static_cast<unsigned char>(s[0]);
         if (c < 0x80) return 1;
         if ((c >> 5) == 0x6) return 2;
         if ((c >> 4) == 0xE) return 3;

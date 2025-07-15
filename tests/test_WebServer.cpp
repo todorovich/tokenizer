@@ -15,7 +15,7 @@
 #include "WebServer.hpp"
 
 std::vector<std::string> load_wordlist() {
-    std::filesystem::path file = std::filesystem::current_path() / "data" / "google-10000-english.txt";
+    std::filesystem::path file = std::filesystem::current_path() / ".." /"data" / "google-10000-english.txt";
     std::cerr << "Trying to open: " << file << "\n";
 
     std::ifstream in(file);

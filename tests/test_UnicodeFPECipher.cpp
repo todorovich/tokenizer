@@ -77,7 +77,7 @@ TEST_CASE("UnicodeFPECipher: mixed mapped and unmapped glyphs", "[UnicodeFPECiph
 // Load Google's 10,000 words from file
 static std::vector<std::string> load_words()
 {
-    std::filesystem::path path = std::filesystem::current_path() / "data" / "google-10000-english.txt";
+    std::filesystem::path path = std::filesystem::current_path() / ".." /"data" / "google-10000-english.txt";
     std::ifstream in(path);
     if (!in) throw std::runtime_error("Missing word list: " + path.string());
 

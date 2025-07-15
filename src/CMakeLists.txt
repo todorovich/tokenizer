@@ -1,6 +1,6 @@
 # TOKENIZER
 
-target_sources(main_library
+target_sources(fpe_cpp
   PRIVATE
     AES256ECB.cpp
     Base64.cpp
@@ -21,19 +21,19 @@ target_sources(main_library
     WebServer.hpp
 )
 
-message(STATUS "main lib ${CMAKE_BINARY_DIR}/_deps/fpe-src/src")
+message(STATUS "main lib ${CMAKE_BINARY_DIR}/_deps/fpe_cpp-src/src")
 
-target_include_directories(main_library
+target_include_directories(fpe_cpp
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_BINARY_DIR}/_deps/fpe-src/src
+        ${CMAKE_BINARY_DIR}/_deps/fpe_cpp-src/src
     PRIVATE
         ${web_sockets_SOURCE_DIR}/src
         ${web_sockets_SOURCE_DIR}/uSockets/src
         ${fpe_SOURCE_DIR}/src
 )
 
-target_link_libraries(main_library
+target_link_libraries(fpe_cpp
     PUBLIC
         bbhash_lib
         fastbase64
@@ -44,6 +44,37 @@ target_link_libraries(main_library
     PRIVATE
         #BLAKE3::blake3
         #simdjson
+)
+
+target_compile_definitions(fpe_cpp PRIVATE OPENSSL_API_COMPAT=0x10100000L)
+
+# SHARED LIB
+
+target_sources(fpe
+    PRIVATE
+        libfpe.cpp
+    PUBLIC
+        libfpe.hpp
+)
+
+target_link_libraries(fpe PRIVATE fpe_cpp)
+
+# SHARED LIB JNI
+
+target_sources(fpe-jni
+    PRIVATE
+        libfpe-jni.cpp
+    PUBLIC
+        libfpe-jni.hpp
+)
+
+target_include_directories(fpe-jni PRIVATE ${JNI_INCLUDE_DIRS})
+
+target_link_libraries(fpe-jni
+    PRIVATE
+        fpe
+        fpe_cpp
+        ${JNI_LIBRARIES}
 )
 
 # HTTP SERVER
@@ -65,6 +96,6 @@ target_include_directories(http_server
 target_link_libraries(http_server
     PRIVATE
         uWebSockets
-        main_library
+        fpe_cpp
         uSockets
 )

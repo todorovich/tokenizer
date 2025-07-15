@@ -156,7 +156,7 @@ TEST_CASE("FF1Cipher collision test with fixed-length arrays", "[FF1Cipher][coll
 
 static std::vector<std::string> load_words_2()
 {
-    std::filesystem::path path = std::filesystem::current_path() / "data" / "google-10000-english.txt";
+    std::filesystem::path path = std::filesystem::current_path() / ".." /"data" / "google-10000-english.txt";
     std::ifstream in(path);
     if (!in) throw std::runtime_error("Missing word list: " + path.string());
 

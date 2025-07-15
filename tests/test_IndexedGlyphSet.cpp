@@ -71,7 +71,7 @@ TEST_CASE("IndexedGlyphSet encode/decode performance benchmark", "[IndexedGlyphS
 
     // Generate test strings: single-character glyph repeated
     for (size_t i = 0; i < input_size; ++i) {
-        inputs.emplace_back(std::string(1, codebook.glyphs()[i % codebook.glyphs().size()]));
+        inputs.emplace_back(codebook.glyphs()[i % codebook.glyphs().size()]);
     }
 
     // Benchmark encode: glyph -> index
